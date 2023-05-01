@@ -58,11 +58,14 @@ int main(void)
 		sprites[i].vy = rand() % 5 - 2;
 
 		// Initialize sprite
-		spr_set(i, true, 24 + sprites[i].sx, 50 + sprites[i].sy, (unsigned)Sprite / 64, i + 7, false, false, false);
+		spr_set(i, true, 24 + sprites[i].sx, 50 + sprites[i].sy, (unsigned)Sprite / 64, VCOL_BLACK, false, false, false);
 	}
 
 	while (true)
 	{
+		// Read collision flags from VIC status
+		char collflags = vic.spr_sprcol;
+			
 		for(char i=0; i<8; i++)
 		{
 			// Advance position			
@@ -83,6 +86,9 @@ int main(void)
 
 			// Update sprite position
 			spr_move(i, 24 + sprites[i].sx, 50 + sprites[i].sy);
+
+			// Colorize colliding sprites yellow
+			spr_color(i, (collflags & (1 << i)) ? VCOL_YELLOW : VCOL_BLACK);
 		}
 
 		// Wait one frame
