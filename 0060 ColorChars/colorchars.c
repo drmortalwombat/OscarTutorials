@@ -2,6 +2,7 @@
 
 int main(void)
 {
+	// First char is a colour code in hex
 	printf("\x90BLACK\n");
 	printf("\x05BWHITE\n");
 	printf("\x1CRED\n");

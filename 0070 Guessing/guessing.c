@@ -17,6 +17,8 @@ int main(void)
 
 			printf("\nInput your guess from 1 to 6:");
 
+			// Response is invalid if it is not a number or a number
+			// less than 1 or greater than 6
 		} while (scanf("%d", &guess) != 1 || guess < 1 || guess > 6);
 
 		if (guess == dice)
@@ -29,6 +31,8 @@ int main(void)
 
 		 	printf("\n\nTry again (y/n):", check);
 
+		 	// Response is invalid if it is not a char
+		 	// or neither a "y" or an "n"
 		} while (scanf("%c", &check) != 1 || (check != 'y' && check != 'n'));
 		
 	} while (check == 'y');
