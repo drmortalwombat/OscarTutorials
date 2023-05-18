@@ -4,6 +4,7 @@
 
 char * const Screen = (char *)0x0400;
 
+// Scroll one char up
 void scroll_up(void)
 {
 	for(char i=0; i<40; i++)
@@ -20,6 +21,7 @@ void scroll_up(void)
 	}
 }
 
+// Scroll one char left
 void scroll_left(void)
 {
 	for(char i=0; i<39; i++)
@@ -36,6 +38,7 @@ void scroll_left(void)
 	}
 }
 
+// Scroll one char right
 void scroll_right(void)
 {
 	for(char i=39; i>0; i--)
@@ -52,6 +55,7 @@ void scroll_right(void)
 	}
 }
 
+// Scroll one char down
 void scroll_down(void)
 {
 	char buffer[40];
@@ -76,12 +80,14 @@ void scroll_down(void)
 		Screen[40 * 13 + i] = buffer[i];
 }
 
+// Fill line with new data
 void fill_line(char y)
 {
 	for(char i=0; i<40; i++)
 		Screen[40 * y + i] = (rand() & 1) + 77;
 }
 
+// Fill column with new data
 void fill_column(char x)
 {
 	for(char i=0; i<25; i++)
@@ -90,14 +96,18 @@ void fill_column(char x)
 
 int main(void)
 {
+	// Position in pixel
 	signed char ix = 0, iy = 0;
+
+	// Velocity in pixel per frame
 	signed char vx = 1, vy = 0;
 
 	for(;;)
 	{
-		vic_waitBottom();
-
+		// Check if user pressed key
 		char ch = getchx();
+
+		// Set direction based on input
 		switch (ch)
 		{
 		case 17:		// Down
@@ -114,14 +124,23 @@ int main(void)
 			break;
 		}
 
+		// Wait for raster to reach bottom of screen
+		vic_waitBottom();
+
+		// Advance scroll position
 		ix += vx;
 		iy += vy;
 
+		// Check if scrolled by full char
 		if (ix < 0)
 		{
+			// Full char scroll to the left, correct offset
 			ix += 8;
+			// Update horizontal scroll register
 			vic.ctrl2 = ix;
+			// Scroll by char
 			scroll_left();
+			// Fill new column
 			fill_column(39);			
 		}
 		else if (ix >= 8)
@@ -147,6 +166,7 @@ int main(void)
 		}
 		else
 		{
+			// Scroll by pixel offset
 			vic.ctrl1 = VIC_CTRL1_DEN | iy;
 			vic.ctrl2 = ix;
 			vic_waitTop();
