@@ -48,73 +48,15 @@ void tile_remap(void)
 // keeping the number of required index registers in the copy routines
 // small
 
-char tile_row[11];
-
-// Generator function for filling a full charrow of tiles.  This will be inlined expanded
-// with a constant rx to generate the four variants with x offset of 0 to 3 into
-// the tile
-
-inline void fill_line_xy(char * sp, char rx, char ry)
-{
-	// Simple version where the tile offset is zero, so the tiles
-	// match the screen position
-
-	// Get first tile
-	char tile = tile_row[0];
-
-	// Full unroll for static addressing
-	#pragma unroll(full)
-	for(char x=0; x<10; x++)
-	{
-
-		// Full unroll for static addressing
-		#pragma unroll(full)
-		for(char i=0; i<4; i++)
-		{
-			// Copy one char
-			*sp++ = PipeRetiled[tile + ((rx + i) & 3) * 16 + ry * 64];
-
-			// Advance to next tile, when at end
-			if (rx + i == 3)
-				tile = tile_row[x + 1];
-		}
-	}
-}
-
-// Fill a single char line of a tile with offset ry and rx
-// into the tile.  The inlining is used to get constant
-// expanded variants for ry
-
-inline void fill_line_x(char * sp, char rx, char ry)
-{
-	switch(rx)
-	{
-	case 0:
-		fill_line_xy(sp, 0, ry);
-		break;
-	case 1:
-		fill_line_xy(sp, 1, ry);
-		break;
-	case 2:
-		fill_line_xy(sp, 2, ry);
-		break;
-	case 3:
-		fill_line_xy(sp, 3, ry);
-		break;
-	}
-}
-
 
 // Generator function for filling a full row of tiles.  This will be inlined expanded
 // with a constant rx to generate the four variants with x offset of 0 to 3 into
 // the tile
 
-inline void fill_qline_xy(char * sp0, char * sp1, char * sp2, char * sp3, char rx)
+inline void fill_qline_xy(const char * tr, char * sp0, char * sp1, char * sp2, char * sp3, char rx)
 {
-	// Simple version where the tile offset is zero, so the tiles
-	// match the screen position
-
-	char tile = tile_row[0];
+	// Fetch first tile index from map
+	char tile = tr[0];
 
 	// Full unroll for static addressing
 	#pragma unroll(full)
@@ -133,9 +75,10 @@ inline void fill_qline_xy(char * sp0, char * sp1, char * sp2, char * sp3, char r
 			*sp2++ = PipeRetiled[tile + ((rx + i) & 3) * 16 + 2 * 64];
 			*sp3++ = PipeRetiled[tile + ((rx + i) & 3) * 16 + 3 * 64];
 
-			// Fetch the next tile, when at last
+			// Fetch the next tile indes from map, when done with last
+			// column
 			if (rx + i == 3)
-				tile = tile_row[x + 1];
+				tile = tr[x + 1];
 		}
 	}
 }
@@ -145,51 +88,29 @@ inline void fill_qline_xy(char * sp0, char * sp1, char * sp2, char * sp3, char r
 // four individual screen pointers, each 40 bytes appart
 // to allow dense y indexing.
 
-void fill_qline_x(char * sp0, char * sp1, char * sp2, char * sp3, char rx)
+void fill_qline_x(const char * tm, char * sp0, char * sp1, char * sp2, char * sp3, char rx)
 {
 	// Expand variants for x offset
 	switch(rx)
 	{
 	case 0:
-		fill_qline_xy(sp0, sp1, sp2, sp3, 0);
+		fill_qline_xy(tm, sp0, sp1, sp2, sp3, 0);
 		break;
 	case 1:
-		fill_qline_xy(sp0, sp1, sp2, sp3, 1);
+		fill_qline_xy(tm, sp0, sp1, sp2, sp3, 1);
 		break;
 	case 2:
-		fill_qline_xy(sp0, sp1, sp2, sp3, 2);
+		fill_qline_xy(tm, sp0, sp1, sp2, sp3, 2);
 		break;
 	case 3:
-		fill_qline_xy(sp0, sp1, sp2, sp3, 3);
+		fill_qline_xy(tm, sp0, sp1, sp2, sp3, 3);
 		break;
 	}
 }
 
 
-// Four functions for the variable y offset start in the tile, the
-// inline of the fill_line_x will produce expanded code, with the
-// ry parameter replaced by a constant
 
-void fill_line_y0(char * sp, char rx)
-{
-	fill_line_x(sp, rx, 0);
-}
-
-void fill_line_y1(char * sp, char rx)
-{
-	fill_line_x(sp, rx, 1);
-}
-
-void fill_line_y2(char * sp, char rx)
-{
-	fill_line_x(sp, rx, 2);
-}
-
-void fill_line_y3(char * sp, char rx)
-{
-	fill_line_x(sp, rx, 3);
-}
-
+char scratch[40];
 
 void fill_screen(char sx, char sy)
 {
@@ -202,62 +123,57 @@ void fill_screen(char sx, char sy)
 	// We only need the offset from here on
 	sx &= 3;
 
-	// Copy first row of tiles into fixed buffer
-	#pragma unroll(full)
-	for(char i=0; i<11; i++)
-		tile_row[i] = tm[i];
-	tm += 16;
 
 	// Copy first incomplete row of tiles based
-	// on y offset
+	// on y offset, using the scratch memory to ignore the
+	// parts of the tiles, which are above screen
+
 	char y = 0;
 	switch (sy & 3)
 	{
 	case 1:
-		fill_line_y1(sp, sx);
-		sp += 40;
-		y++;
-		// Intentional fall through
-	case 2:
-		fill_line_y2(sp, sx);
-		sp += 40;
-		y++;
-		// Intentional fall through
-	case 3:
-		fill_line_y3(sp, sx);
-		sp += 40;
-		y++;
-
-		// Fetch next row of tiles
-		#pragma unroll(full)
-		for(char i=0; i<11; i++)
-			tile_row[i] = tm[i];
+		fill_qline_x(tm, scratch, sp, sp + 40, sp + 80, sx);
+		sp += 120;
+		y = 3;
 		tm += 16;
+		break;
+	case 2:
+		fill_qline_x(tm, scratch, scratch, sp, sp + 40, sx);
+		sp += 80;
+		y = 2;
+		tm += 16;
+		break;
+	case 3:
+		fill_qline_x(tm, scratch, scratch, scratch, sp, sx);
+		sp += 40;
+		y = 1;
+		tm += 16;
+		break;
 	}
 
 	while (y < 22)
 	{
 		// Expand complete rows of tiles
-		fill_qline_x(sp, sp + 40, sp + 80, sp + 120, sx);
+		fill_qline_x(tm, sp, sp + 40, sp + 80, sp + 120, sx);
 		sp += 160;
 		y += 4;	
-
-		// Fetch next row of tiles
-		#pragma unroll(full)
-		for(char i=0; i<11; i++)
-			tile_row[i] = tm[i];
 		tm += 16;
 	}
 
-	// Expand remaining incomplete row of tiles
+	// Expand remaining incomplete row of tiles, again
+	// storing overflowing rows into scratch memory
+	
 	switch (y)
 	{
 	case 22:
-		fill_line_y2(sp + 80, sx);
+		fill_qline_x(tm, sp, sp + 40, sp + 80, scratch, sx);
+		break;
 	case 23:
-		fill_line_y1(sp + 40, sx);
+		fill_qline_x(tm, sp, sp + 40, scratch, scratch, sx);
+		break;
 	case 24:
-		fill_line_y0(sp, sx);
+		fill_qline_x(tm, sp, scratch, scratch, scratch, sx);
+		break;
 	}
 }
 
