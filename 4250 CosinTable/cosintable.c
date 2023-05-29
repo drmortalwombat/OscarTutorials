@@ -41,6 +41,7 @@ int main(void)
 	spr_set(0, true, CenterX, CenterY, (unsigned)Sprite / 64, VCOL_WHITE, false, false, false);
 	spr_set(1, true, CenterX, CenterY, (unsigned)Sprite / 64, VCOL_BLACK, false, false, false);
 
+	// Eight bit angle
 	char w = 0;
 	for(;;)
 	{

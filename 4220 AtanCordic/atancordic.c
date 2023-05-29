@@ -26,7 +26,7 @@ char * const Sprite = (char *)0x0380;
 static const int CenterX = 160 + 24 - 7;
 static const int CenterY = 100 + 50 - 7;
 
-// Cording atan table
+// Cordic atan table
 __striped static int arortab[8] = {8192, 4836, 2555, 1297, 651, 325, 162, 81};
 
 // Calculate inverse tangens using cordic
