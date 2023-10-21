@@ -14,20 +14,23 @@ char * const Charset = (char *)0xd000;
 // Color mem address
 char * const Color = (char *)0xd800;
 
+#define GRID_WIDTH	30
+#define GRID_HEIGHT	30
+
 // The charpad resource in lz compression, without the need
 // for binary export
 const char PipeFont[] = {
-	#embed ctm_chars lzo "../Resources/pipes.ctm"
+	#embed ctm_chars lzo "../Resources/pipes30.ctm"
 };
 
 // The tile map, a 16x16 grid of 8 bit tile indices
 const char PipeMap[] = {
-	#embed ctm_map8 "../Resources/pipes.ctm"
+	#embed ctm_map8 "../Resources/pipes30.ctm"
 };
 
 // The tiles, an array of 4x4 char indices
 const char PipTiles[] = {
-	#embed ctm_tiles8 "../Resources/pipes.ctm"
+	#embed ctm_tiles8 "../Resources/pipes30.ctm"
 };
 
 char PipeRetiled[16 * 4 * 4];
@@ -118,7 +121,7 @@ void fill_screen(char sx, char sy)
 	char * sp = Screen;
 
 	// Tile map source pointer
-	const char * tm = PipeMap + (sy >> 2) * 16 + (sx >> 2);
+	const char * tm = PipeMap + (sy >> 2) * GRID_WIDTH + (sx >> 2);
 
 	// We only need the offset from here on
 	sx &= 3;
@@ -135,19 +138,19 @@ void fill_screen(char sx, char sy)
 		fill_qline_x(tm, scratch, sp, sp + 40, sp + 80, sx);
 		sp += 120;
 		y = 3;
-		tm += 16;
+		tm += GRID_WIDTH;
 		break;
 	case 2:
 		fill_qline_x(tm, scratch, scratch, sp, sp + 40, sx);
 		sp += 80;
 		y = 2;
-		tm += 16;
+		tm += GRID_WIDTH;
 		break;
 	case 3:
 		fill_qline_x(tm, scratch, scratch, scratch, sp, sx);
 		sp += 40;
 		y = 1;
-		tm += 16;
+		tm += GRID_WIDTH;
 		break;
 	}
 
@@ -157,7 +160,7 @@ void fill_screen(char sx, char sy)
 		fill_qline_x(tm, sp, sp + 40, sp + 80, sp + 120, sx);
 		sp += 160;
 		y += 4;	
-		tm += 16;
+		tm += GRID_WIDTH;
 	}
 
 	// Expand remaining incomplete row of tiles, again
@@ -239,12 +242,12 @@ int main(void)
 		iy += vy;
 
 		// Check for boundary collision and reflect
-		if (ix < 0 || ix > 6 * 4 * 8)
+		if (ix < 0 || ix > (GRID_WIDTH - 10) * 4 * 8)
 		{
 			vx = -vx;
 			ix += vx;
 		}
-		if (iy < 0 || iy > 10 * 4 * 8)
+		if (iy < 0 || iy > (GRID_HEIGHT - 6) * 4 * 8)
 		{
 			vy = -vy;
 			iy += vy;
